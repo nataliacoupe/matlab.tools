@@ -1,28 +1,29 @@
 function [week_avg,week_count,week_sum,week_min,week_max,week_std,weekloc,...
     var_cycle_out,var_cycle_out_dateloc] =...
     AM_week2cycle_rs(var,dateloc,tresh_daily,tresh_nhours,tresh_anomaly)
-% %Function calculates 16 days average for daily flux or meteorological variables
-% %It does so in similar way that MODIS products are deliver, each year=week 1
-% %Natalia Restrepo June 19, 2007 Arizona
+% % Function calculates 16 days average for daily flux or meteorological variables
+% % It does so in similar way that MODIS products are deliver, each year=week 1
+% % Natalia Restrepo June 19, 2007 Arizona
 warning off all
 % %..........................................................................
-% %Requires the following info
-% %var:           hourly measurements
-% %dateloc:       YYY,MM,DD time vector
-% %tresh_daily:   minumum number of hours per day
-% %tresh_nhours:  minimum number of points per hour to obtain the average
-% %tresh_anomaly: outlier definition for the hour
+% % Requires the following info
+% % var:           hourly measurements
+% % dateloc:       YYY,MM,DD time vector
+% % tresh_daily:   minumum number of hours per day
+% % tresh_nhours:  minimum number of points per hour to obtain the average
+% % tresh_anomaly: outlier definition for the hour
 % %..........................................................................
+% [Yday,~,~,~,~,~] = datevec(dateloc);
 [Y,M,D,HR,~,~] = datevec(dateloc);
-% %Remove few values if by UTM you are calculating Jan 1
-while ((M(end)==1)&&(D(end)==1))
-    dateloc(end) = [];
-    var(end)     = [];
+%Remove few values if by UTM you are calculating Jan 1
+while ((M(end)==1)&&(D(end)<=3))
+    dateloc(end)=[];
+    var(end)=[];
     [Y,M,D,HR,~,~] = datevec(dateloc);
 end
-while ((M(1)==12)&&(D(1)==31))
-    dateloc(1) = [];
-    var(1)     = [];
+while ((M(1)==12)&&(D(1)>=29))
+    dateloc(1)=[];
+    var(1)=[];
     [Y,M,D,HR,~,~] = datevec(dateloc);
 end
 
@@ -40,7 +41,10 @@ numweek = length(weekloc);
 week_sum = NaN(numweek,1);          week_count = NaN(numweek,1);
 week_std = NaN(numweek,1);          week_avg   = NaN(numweek,1);
 week_min = NaN(numweek,1);          week_max   = NaN(numweek,1);
-var_cycle = NaN(numhour,1);         var_cycle_count = NaN(numhour,1);
+
+var_cycle = NaN(numhour,1);         var_cycle_count = NaN(numhour,1);       
+var_cycle_std = NaN(numhour,1);
+
 var_vec   = var;                    hour_vec    = HR;
 % % %daily precipitation and snow fall values
 
@@ -66,6 +70,7 @@ for ik=1:numweek
                 ix = var_vec(ind);
                 ix = AM_rm_outlier(ix,tresh_anomaly);
                 var_cycle(ip)       = nanmean(ix);
+                var_cycle_std(ip)   = nanstd(ix);
                 var_cycle_count(ip) = length(ind(~isnan(ind)));
             end
         end
@@ -79,15 +84,15 @@ for ik=1:numweek
         
         if (length(var_cycle(~isnan(var_cycle)))>=tresh_daily)
             week_avg(ik) = nanmean(var_cycle);
-            week_std(ik) = std(var_cycle);
-            week_sum(ik) = sum(var_cycle);
-            week_min(ik) = min(var_cycle);
-            week_max(ik) = max(var_cycle);
+            week_std(ik) = nanmean(var_cycle_std);
+            week_sum(ik) = nansum(var_cycle);
+            week_min(ik) = nanmin(var_cycle);
+            week_max(ik) = nanmax(var_cycle);
         end
     end
     %     plot(0:23,var_cycle,'color',color_mtx((floor((ik-1)/23))+1,:)); hold on;
     %     plot(0:23,(var_cycle*0)+week_avg(ik),':','color',color_mtx((floor((ik-1)/23))+1,:));
     %     axis([0 23 0 15]); %     xlim([0 23]);
-    var_vec   = var;        	hour_vec        = HR;
-    var_cycle = NaN(numhour,1);       var_cycle_count = NaN(numhour,1);
+    var_vec   = var;                    hour_vec        = HR;
+    var_cycle = NaN(numhour,1);         var_cycle_count = NaN(numhour,1);
 end
